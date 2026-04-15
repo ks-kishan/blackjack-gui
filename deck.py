@@ -1,4 +1,5 @@
 from random import shuffle
+from decimal import Decimal
 
 class Card():
   def __init__(self, suit, rank):
@@ -91,9 +92,29 @@ class Game():
     self.deck = Deck()
     self.player_hand = Hand()
     self.dealer_hand = Hand()
-    self.state = 'player_turn' # player_turn / dealer_turn / round_over
+    self.state = 'betting' # player_turn / dealer_turn / round_over / betting
     self.result = None
     self.events = []
+    self.balance: Decimal = Decimal('1000')
+    self.current_bet: int = 0
+    self.minimum_bet: int = 10
+
+
+  def reset_bankroll(self):
+    if self.balance < self.minimum_bet:
+      self.balance = Decimal('1000')
+      self.events.append('Reset Bankroll')
+      return True
+    return False
+
+  def place_bet(self, bet: int):
+    if self.state != 'betting':
+      return
+    if bet >= self.minimum_bet and bet <= self.balance:
+      self.current_bet = bet
+      self.balance -= bet
+      return True
+    return False
   
   def start_round(self):
     self.events.clear()
@@ -113,8 +134,10 @@ class Game():
 
       if self.player_hand.is_blackjack() and self.dealer_hand.is_blackjack():
         self.result = ('push', 'both_blackjack')
+        self.balance += self.current_bet
       elif self.player_hand.is_blackjack():
         self.result = ('win', 'blackjack')
+        self.balance += (self.current_bet + self.current_bet * Decimal('1.5'))
       elif self.dealer_hand.is_blackjack():
         self.result = ('lose', 'dealer_blackjack')
 
@@ -150,18 +173,24 @@ class Game():
 
     if self.dealer_hand.is_bust():
       self.result = ('win', 'dealer_busted')
+      self.balance += (2 * self.current_bet)
     elif self.player_hand.value > self.dealer_hand.value:
       self.result = ('win', 'high_value')
+      self.balance += (2 * self.current_bet)
     elif self.player_hand.value < self.dealer_hand.value:
       self.result = ('lose', 'low_value')
     elif self.player_hand.value == self.dealer_hand.value:
       self.result = ('push', 'equal_value')
+      self.balance += self.current_bet
 
   def get_result(self):
     if self.state != 'round_over':
-      return "ghochu"
+      return None
     
     return self.result
+  
+  def get_current_balance(self):
+    return self.balance
 
 if __name__ == '__main__':
 
@@ -169,14 +198,25 @@ if __name__ == '__main__':
   print('length of original deck: ', len(game.deck._deck))
 
   while True:
+    print("\n=== New Round ===")
+    if game.reset_bankroll():
+      print('balance reset to ₹1000')
+      print(f'current balance: ₹{game.get_current_balance()}')
+    else:
+      print(f'current balance: ₹{game.get_current_balance()}')
+    while True:
+      bet = int(input('Enter bet: ₹'))
+      if game.place_bet(bet=bet):
+        break
+      else:
+        print('invalid bet or low balance')
     game.start_round()
     for event in game.events:
       if event == "deck_reshuffled":
         print("Deck reshuffled")
-    print('\nlength of deck', len(game.deck._deck))
-    print("\n=== New Round ===")
     print(f"Dealer: {game.dealer_hand._hand[0]} ; [Hidden]")
     print(f"Player: {game.player_hand} (value: {game.player_hand.value})")
+    print('\nlength of deck', len(game.deck._deck))
 
     while game.state == 'player_turn':
       move = input('hit or stand (h/s): ')
@@ -190,8 +230,10 @@ if __name__ == '__main__':
     print(f"Dealer: {game.dealer_hand} (value: {game.dealer_hand.value})")
     print(f"Player: {game.player_hand} (value: {game.player_hand.value})")
 
+    print()
     print(game.get_result())
-    print('length of deck', len(game.deck._deck), '\n')
+    print(f'current balance: ₹{game.get_current_balance()}')
+    print('\nlength of deck', len(game.deck._deck), '\n')
 
     if input('play again (y/n)') != 'y':
       break
