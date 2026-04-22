@@ -12,7 +12,7 @@ class Card():
 class Deck():
   def __init__(self):
     self.suits = ['clubs', 'hearts', 'diamonds', 'spades']
-    self.ranks = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
+    self.ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 
     self._deck = []
     self.rebuild_deck()
@@ -44,11 +44,11 @@ class Hand():
     self._hand: list[Card] = []
     self.value: int = 0
     self.values = {rank: int(rank) for rank in '23456789'}
-    self.values.update({'Ace': 11, '10': 10, 'Jack': 10, 'Queen': 10, 'King': 10})
+    self.values.update({'A': 11, '10': 10, 'J': 10, 'Q': 10, 'K': 10})
     self.reducible_aces = 0
     
   def add(self, card: Card):
-    if card.rank == 'Ace':
+    if card.rank == 'A':
       self.reducible_aces += 1
     self._hand.append(card)
     self.value += self.values[card.rank]
@@ -69,7 +69,7 @@ class Hand():
     aces = 0
     for card in self._hand:
       total = total + self.values[card.rank]
-      if card.rank == 'Ace':
+      if card.rank == 'A':
         aces += 1
     while total > 21 and aces > 0:
       total -= 10
@@ -188,6 +188,19 @@ class Game():
       return None
     
     return self.result
+  
+  def get_player_cards(self):
+    return self.player_hand._hand
+
+  def get_dealer_cards(self):
+    return self.dealer_hand._hand
+
+  def get_deck_length(self):
+    return len(self.deck._deck)
+  
+  def reset_for_bet(self):
+    self.state = 'betting'
+    self.current_bet = 0
   
   def get_current_balance(self):
     return self.balance
